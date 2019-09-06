@@ -10,9 +10,8 @@ from requests import get
 from requests.exceptions import RequestException
 from contextlib import closing
 from bs4 import BeautifulSoup 
-import datetime
 
-url='https://candidat.pole-emploi.fr/offres/recherche?lieux=24R&motsCles=data&offresPartenaires=true&range=0-9&rayon=10&tri=0'
+
 
 def simple_get(url):
     """
@@ -58,7 +57,6 @@ def get_url(soup):
         urls.append(url)
     return urls
 
-
 """
 stock les url dans une liste
 """
@@ -76,12 +74,14 @@ dico = {}
 
 url1=0
 nbOffre=int(get_nb(soup))
-c=0
+
 nbOffre=30
 
 while(url1<=nbOffre):
-    c+=1
-    print("Liste d'url numero: ",c)
+    """
+    premiere boucle qui recupere les urls 1 par 1
+    """
+    
     url2 = url1+149 if (url1+150<nbOffre) else nbOffre 
     urlR="%d-%d" % (url1, url2)
     
@@ -91,14 +91,13 @@ while(url1<=nbOffre):
     soup=BeautifulSoup(url, 'html.parser')
     allUrl=get_url(soup)
     url1+=150
-    
-    o=0
+     
     for x in allUrl:
-        o+=1
-        print('Url numero: ',o)
+        
         """
-        boucle qui envoie les urls une par une
+        Boucle qui recupère toutes les infos par url
         """
+        
         liste=[]
         
         raw_html = simple_get(x)
@@ -111,7 +110,7 @@ while(url1<=nbOffre):
         try:           
             secteur = soup.find("span", itemprop={"industry"}).text
         except:
-            secteur='Pas de secteur'
+            secteur=''
             
         address = soup.find("span", itemprop={"name"}).text           
         description = soup.find("div", itemprop={"description"}).text
@@ -126,9 +125,9 @@ while(url1<=nbOffre):
         try:        
             statut = soup.find("span", itemprop={"qualifications"}).text
         except:
-            statut = "Pas de statut"
+            statut = ""
         
-        entreprise = str(soup.find_all('h4', attrs={"class":"t4 title"})[0:1])
+        entreprise = str(soup.find_all('h4', {"class":"t4 title"})[0:1])
         entreprise = entreprise[22:len(entreprise)].replace("</h4>]","").replace("\n","")
         
         partenaire = str(soup.find("a", {"id": "idLienPartenaire"}))
@@ -139,20 +138,18 @@ while(url1<=nbOffre):
             partenaire = partenaire[idx:idP].replace('href="','').replace('"','')
     
         except:
-            partenaire="Pas de lien"
+            partenaire=""
             
         ref = str(soup.find_all("span", itemprop={"value"})[0:1])
         ref=ref[24:len(ref)].replace("</span>]","")
         
-        """
-        ajout des elems dans une liste 
-        """
-        
-        listeCol=[title,date,secteur,address,description,skills,xp,contrat,statut,entreprise,partenaire,ref]
+        listeCol=[title,date,secteur,address,description,skills,xp,contrat,statut,entreprise,partenaire]
         motclef=""
         
         for a in listeCol:
-            
+            """
+            Boucle pour inséré les données et recupérer les mots clef
+            """
             liste.append(a)
 
             if ((a.find("sql"))>=0 or (a.find("python"))>=0  or (a.find("java"))>=0 or (a.find(" r "))>=0):
@@ -169,27 +166,20 @@ while(url1<=nbOffre):
         liste.append(motclef)
        
         """
-        ajout de chaque liste dans une autre liste ( double liste pour faire )
+        ajout de chaque liste dans un dico avec la reference en index
         """
         
-        listeF.append(liste)
-
-for i in listeF:
-    
-    """
-    transformation de la liste en dictionnaire
-    """
-    
-    date = str(datetime.datetime.now())  
-    dico[date] = i
+        dico[ref]=liste
 
 """
 transformation du dictionnaire en df avec les clés en index
 """
 
-df= pd.DataFrame.from_dict(dico,orient=u'index',columns=[u"Intitule",u"Date",u"Secteur_Activite",u"Adresse",u"Description",u"Competences",u"Experience",u"Type_Contrat",u"Statut",u"Entreprise",u"Lien_Partenaire",u"Reference",u"Mot_Clef"])
-print(df)
+df= pd.DataFrame.from_dict(dico,orient=u'index',columns=[u"Intitule",u"Date",u"Secteur_Activite",u"Adresse",u"Description",u"Competences",u"Experience",u"Type_Contrat",u"Statut",u"Entreprise",u"Lien_Partenaire",u"Mot_Clef"])
 
+"""
+Insertion du dico dans la BDD
+"""
 #
 #from sqlalchemy import create_engine
 #import argparse
