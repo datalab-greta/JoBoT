@@ -3,7 +3,7 @@
 """
 Created on Fri Aug 30 14:21:55 2019
 
-@author: maxime
+@author: maxime castel et cyprien lebrun
 """
 import pandas as pd
 from requests import get
